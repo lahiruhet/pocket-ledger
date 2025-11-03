@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expenditure Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+            border: 1px solid #e8e8e8;
+        }
+
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 24px;
+            font-size: 2em;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            color: white;
+            padding: 24px;
+            border-radius: 4px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.6em;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-card.positive {
+            background: #059669;
+            border-color: #047857;
+        }
+
+        .stat-card.negative {
+            background: #dc2626;
+            border-color: #b91c1c;
+        }
+
+        .stat-card.warning {
+            background: #6366f1;
+            border-color: #4f46e5;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section {
+            background: white;
+            padding: 32px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e8e8e8;
+        }
+
+        .section h2 {
+            color: #1a1a1a;
+            margin-bottom: 24px;
+            font-size: 1.25em;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid #e8e8e8;
+            padding-bottom: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            font-weight: 500;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d4d4d4;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: all 0.2s;
+            background: white;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .btn {
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s;
+            width: 100%;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .btn:hover {
+            background: #000;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            width: auto;
+            margin-left: 8px;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #059669;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #1a1a1a;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #e8e8e8;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95em;
+        }
+
+        tr:hover {
+            background-color: #fafafa;
+        }
+
+        tr.upcoming-row {
+            background-color: #fef3c7;
+        }
+
+        tr.upcoming-row:hover {
+            background-color: #fde68a;
+        }
+
+        tr.upcoming-row td {
+            border-bottom: 1px solid #fbbf24;
+        }
+
+        .positive-amount {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .negative-amount {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .cash-reconciliation {
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+        }
+
+        .cash-reconciliation h3 {
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            font-size: 1em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .reconciliation-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.95em;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e8e8e8;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 0.85em;
+        }
+
+        .tab-btn.active {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #fbbf24;
+            color: #78350f;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                padding: 24px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Expenditure Tracker</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Current Balance</div>
+                    <div class="stat-value" id="currentBalance">Rs. 0.00</div>
+                </div>
+                <div class="stat-card positive">
+                    <div class="stat-label">Total Income</div>
+                    <div class="stat-value" id="totalIncome">Rs. 0.00</div>
+                </div>
+                <div class="stat-card negative">
+                    <div class="stat-label">Total Expenses</div>
+                    <div class="stat-value" id="totalExpenses">Rs. 0.00</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Cash in Hand</div>
+                    <div class="stat-value" id="cashInHand">Rs. 15,000.00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section">
+            <div id="transactions-tab" class="tab-content active">
+                <h2>All Transactions</h2>
+                
+                <div class="cash-reconciliation">
+                    <h3>Cash Reconciliation</h3>
+                    <div class="reconciliation-item">
+                        <span>Calculated Balance:</span>
+                        <strong id="calculatedBalance">Rs. 0.00</strong>
+                    </div>
+                    <div class="reconciliation-item">
+                        <span>Actual Cash in Hand:</span>
+                        <strong id="actualCash">Rs. 15,000.00</strong>
+                    </div>
+                    <div class="reconciliation-item" style="border-top: 1px solid #d4d4d4; padding-top: 10px; margin-top: 10px;">
+                        <span>Untracked Cash Expenses:</span>
+                        <strong id="untrackedExpenses" style="color: #dc2626;">Rs. 0.00</strong>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Balance</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <div class="section">
+                <h2>Add Transaction</h2>
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="transactionType" required>
+                            <option value="expense">Expense (Debit)</option>
+                            <option value="income">Income (Credit)</option>
+                            <option value="upcoming">Upcoming Expense</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="dateGroup">
+                        <label>Date</label>
+                        <input type="date" id="transactionDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="transactionDescription" placeholder="e.g., Groceries" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Amount (Rs.)</label>
+                        <input type="number" id="transactionAmount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">Add Entry</button>
+                </form>
+
+                <div style="margin-top: 32px;">
+                    <h2>Update Cash in Hand</h2>
+                    <form id="cashForm">
+                        <div class="form-group">
+                            <label>Actual Cash Amount (Rs.)</label>
+                            <input type="number" id="cashAmount" step="0.01" placeholder="15000.00" required>
+                        </div>
+                        <button type="submit" class="btn">Update Cash</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" style="margin-top: 24px;">
+            <h2>Cash History</h2>
+            <p style="color: #6b7280; margin-bottom: 20px; font-size: 0.9em;">Track historical cash in hand entries to see how your actual cash compared to calculated balance over time.</p>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Actual Cash</th>
+                            <th>Calculated Balance</th>
+                            <th>Untracked Expenses</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cashHistoryTable">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #9ca3af; padding: 30px;">No cash history yet. Update your cash in hand to start tracking.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let transactions = [];
+        let upcomingExpenses = [];
+        let actualCashInHand = 15000;
+        let cashHistory = [];
+
+        // Load data from localStorage
+        function loadData() {
+            const savedTransactions = localStorage.getItem('transactions');
+            const savedUpcoming = localStorage.getItem('upcomingExpenses');
+            const savedCash = localStorage.getItem('actualCash');
+            const savedCashHistory = localStorage.getItem('cashHistory');
+            
+            if (savedTransactions) {
+                transactions = JSON.parse(savedTransactions);
+            } else {
+                // Load initial data from your example
+                transactions = [
+                    {date: '2025-10-31', description: 'Decant', debit: 3333, credit: 0, type: 'completed'},
+                    {date: '2025-10-31', description: 'SLT', debit: 10000, credit: 0, type: 'completed'},
+                    {date: '2025-10-31', description: 'Thatta', debit: 21500, credit: 0, type: 'completed'},
+                    {date: '2025-10-31', description: 'Salary-Add', debit: 0, credit: 30000, type: 'completed'},
+                    {date: '2025-10-31', description: 'Salary-Base', debit: 0, credit: 45000, type: 'completed'},
+                    {date: '2025-10-31', description: 'Got Scammed', debit: 7500, credit: 0, type: 'completed'},
+                    {date: '2025-10-31', description: 'Online Examination', debit: 10000, credit: 0, type: 'completed'},
+                    {date: '2025-10-31', description: 'Physical Examination', debit: 18000, credit: 0, type: 'completed'},
+                    {date: '2025-11-01', description: 'Thatta Lend', debit: 0, credit: 5000, type: 'completed'},
+                    {date: '2025-11-01', description: 'UberEats', debit: 1983, credit: 0, type: 'completed'},
+                    {date: '2025-11-01', description: 'Uber', debit: 500, credit: 0, type: 'completed'},
+                    {date: '2025-11-02', description: 'UberEats', debit: 1000, credit: 0, type: 'completed'},
+                    {date: '2025-11-03', description: 'Ikman', debit: 2100, credit: 0, type: 'completed'},
+                    {date: '2025-11-03', description: 'Uber', debit: 500, credit: 0, type: 'completed'},
+                    {date: '2025-11-03', description: 'BetSS Winnings', debit: 0, credit: 13000, type: 'completed'}
+                ];
+            }
+            
+            if (savedUpcoming) {
+                upcomingExpenses = JSON.parse(savedUpcoming);
+            } else {
+                // Load initial upcoming expenses from your data
+                upcomingExpenses = [
+                    {description: 'uStore', debit: 2433, credit: 0},
+                    {description: 'Daraz', debit: 1056, credit: 0},
+                    {description: 'Daraz', debit: 1457, credit: 0},
+                    {description: 'Daraz', debit: 969, credit: 0},
+                    {description: 'Amma', debit: 10000, credit: 0},
+                    {description: 'Sheran-SHACourt', debit: 0, credit: 25000},
+                    {description: 'Sheran-MSP', debit: 0, credit: 4450},
+                    {description: 'Monthly Lunch', debit: 5000, credit: 0},
+                    {description: 'Physical Examination', debit: 18000, credit: 0},
+                    {description: 'Etihad Refund', debit: 0, credit: 46000}
+                ];
+            }
+            
+            if (savedCash) {
+                actualCashInHand = parseFloat(savedCash);
+            }
+            
+            if (savedCashHistory) {
+                cashHistory = JSON.parse(savedCashHistory);
+            }
+            
+            renderTransactions();
+            renderCashHistory();
+            updateStats();
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            localStorage.setItem('upcomingExpenses', JSON.stringify(upcomingExpenses));
+            localStorage.setItem('actualCash', actualCashInHand.toString());
+            localStorage.setItem('cashHistory', JSON.stringify(cashHistory));
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return 'Rs. ' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        // Calculate balance
+        function calculateBalance() {
+            let balance = 0;
+            transactions.forEach(t => {
+                balance += (t.credit - t.debit);
+            });
+            return balance;
+        }
+
+        // Render transactions table
+        function renderTransactions() {
+            const tbody = document.getElementById('transactionTable');
+            tbody.innerHTML = '';
+            
+            // Sort completed transactions by date
+            const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            let runningBalance = 0;
+            
+            // Add completed transactions
+            sortedTransactions.forEach((t, index) => {
+                runningBalance += (t.credit - t.debit);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(t.date).toLocaleDateString('en-GB')}</td>
+                    <td>${t.description}</td>
+                    <td>Completed</td>
+                    <td class="negative-amount">${t.debit > 0 ? formatCurrency(t.debit) : ''}</td>
+                    <td class="positive-amount">${t.credit > 0 ? formatCurrency(t.credit) : ''}</td>
+                    <td style="font-weight: 600; ${runningBalance >= 0 ? 'color: #059669' : 'color: #dc2626'}">${formatCurrency(runningBalance)}</td>
+                    <td>
+                        <button class="btn btn-small btn-danger" onclick="deleteTransaction(${index})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Add upcoming expenses
+            upcomingExpenses.forEach((expense, index) => {
+                const projectedBalance = runningBalance + (expense.credit - expense.debit);
+                
+                const row = document.createElement('tr');
+                row.className = 'upcoming-row';
+                row.innerHTML = `
+                    <td>-</td>
+                    <td>${expense.description}</td>
+                    <td><span class="status-badge">Upcoming</span></td>
+                    <td class="negative-amount">${expense.debit > 0 ? formatCurrency(expense.debit) : ''}</td>
+                    <td class="positive-amount">${expense.credit > 0 ? formatCurrency(expense.credit) : ''}</td>
+                    <td style="font-weight: 600; ${projectedBalance >= 0 ? 'color: #059669' : 'color: #dc2626'}">${formatCurrency(projectedBalance)}</td>
+                    <td>
+                        <button class="btn btn-small btn-danger" onclick="deleteUpcoming(${index})">Delete</button>
+                        <button class="btn btn-small" onclick="markAsCompleted(${index})">Complete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+                
+                runningBalance = projectedBalance;
+            });
+        }
+
+        // Render cash history table
+        function renderCashHistory() {
+            const tbody = document.getElementById('cashHistoryTable');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            // Sort by date (newest first)
+            const sortedHistory = [...cashHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedHistory.forEach((entry, index) => {
+                const calculatedBalance = entry.calculatedBalance || 0;
+                const difference = calculatedBalance - entry.amount;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(entry.date).toLocaleDateString('en-GB')} ${new Date(entry.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}</td>
+                    <td style="font-weight: 600;">${formatCurrency(entry.amount)}</td>
+                    <td>${formatCurrency(calculatedBalance)}</td>
+                    <td style="font-weight: 600; ${Math.abs(difference) < 0.01 ? 'color: #059669' : 'color: #dc2626'}">${formatCurrency(Math.abs(difference))}</td>
+                    <td>
+                        <button class="btn btn-small btn-danger" onclick="deleteCashHistory(${index})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            const balance = calculateBalance();
+            const totalIncome = transactions.reduce((sum, t) => sum + t.credit, 0);
+            const totalExpenses = transactions.reduce((sum, t) => sum + t.debit, 0);
+            const untrackedExpenses = balance - actualCashInHand;
+            
+            document.getElementById('currentBalance').textContent = formatCurrency(balance);
+            document.getElementById('totalIncome').textContent = formatCurrency(totalIncome);
+            document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
+            document.getElementById('cashInHand').textContent = formatCurrency(actualCashInHand);
+            document.getElementById('calculatedBalance').textContent = formatCurrency(balance);
+            document.getElementById('actualCash').textContent = formatCurrency(actualCashInHand);
+            document.getElementById('untrackedExpenses').textContent = formatCurrency(Math.abs(untrackedExpenses));
+        }
+
+        // Toggle date field based on transaction type
+        document.getElementById('transactionType').addEventListener('change', function() {
+            const dateGroup = document.getElementById('dateGroup');
+            const dateInput = document.getElementById('transactionDate');
+            
+            if (this.value === 'upcoming') {
+                dateGroup.style.display = 'none';
+                dateInput.required = false;
+            } else {
+                dateGroup.style.display = 'block';
+                dateInput.required = true;
+            }
+        });
+
+        // Add transaction
+        document.getElementById('transactionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('transactionType').value;
+            const date = document.getElementById('transactionDate').value;
+            const description = document.getElementById('transactionDescription').value;
+            const amount = parseFloat(document.getElementById('transactionAmount').value);
+            
+            if (type === 'upcoming') {
+                upcomingExpenses.push({
+                    description: description,
+                    debit: amount,
+                    credit: 0
+                });
+            } else {
+                transactions.push({
+                    date: date,
+                    description: description,
+                    debit: type === 'expense' ? amount : 0,
+                    credit: type === 'income' ? amount : 0,
+                    type: 'completed'
+                });
+            }
+            
+            saveData();
+            renderTransactions();
+            updateStats();
+            
+            // Reset form
+            this.reset();
+            document.getElementById('transactionDate').valueAsDate = new Date();
+            document.getElementById('dateGroup').style.display = 'block';
+            document.getElementById('transactionDate').required = true;
+        });
+
+        // Update cash
+        document.getElementById('cashForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newCashAmount = parseFloat(document.getElementById('cashAmount').value);
+            const currentCalculatedBalance = calculateBalance();
+            
+            // Add to cash history
+            cashHistory.push({
+                date: new Date().toISOString(),
+                amount: newCashAmount,
+                calculatedBalance: currentCalculatedBalance
+            });
+            
+            actualCashInHand = newCashAmount;
+            
+            saveData();
+            updateStats();
+            renderCashHistory();
+            
+            alert('Cash in hand updated successfully!');
+        });
+
+        // Delete cash history entry
+        function deleteCashHistory(index) {
+            if (confirm('Are you sure you want to delete this cash history entry?')) {
+                const sortedHistory = [...cashHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const entryToDelete = sortedHistory[index];
+                const originalIndex = cashHistory.findIndex(e => e.date === entryToDelete.date);
+                
+                cashHistory.splice(originalIndex, 1);
+                saveData();
+                renderCashHistory();
+            }
+        }
+
+        // Delete transaction
+        function deleteTransaction(index) {
+            if (confirm('Are you sure you want to delete this transaction?')) {
+                const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const transactionToDelete = sortedTransactions[index];
+                const originalIndex = transactions.findIndex(t => 
+                    t.date === transactionToDelete.date && 
+                    t.description === transactionToDelete.description && 
+                    t.debit === transactionToDelete.debit && 
+                    t.credit === transactionToDelete.credit
+                );
+                
+                transactions.splice(originalIndex, 1);
+                saveData();
+                renderTransactions();
+                updateStats();
+            }
+        }
+
+        // Delete upcoming expense
+        function deleteUpcoming(index) {
+            if (confirm('Are you sure you want to delete this upcoming expense?')) {
+                upcomingExpenses.splice(index, 1);
+                saveData();
+                renderTransactions();
+                updateStats();
+            }
+        }
+
+        // Mark upcoming expense as completed
+        function markAsCompleted(index) {
+            const expense = upcomingExpenses[index];
+            const today = new Date().toISOString().split('T')[0];
+            
+            transactions.push({
+                date: today,
+                description: expense.description,
+                debit: expense.debit,
+                credit: expense.credit,
+                type: 'completed'
+            });
+            
+            upcomingExpenses.splice(index, 1);
+            
+            saveData();
+            renderTransactions();
+            updateStats();
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'transactions') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('transactions-tab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('upcoming-tab').classList.add('active');
+            }
+        }
+
+        // Initialize
+        loadData();
+        document.getElementById('transactionDate').valueAsDate = new Date();
+        document.getElementById('cashAmount').value = actualCashInHand;
+    </script>
+</body>
+</html>
