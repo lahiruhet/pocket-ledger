@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CashFlow - Personal Finance Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -340,20 +341,182 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .header {
                 padding: 24px;
             }
-            
+
             .section {
                 padding: 20px;
             }
         }
+
+        /* Auth Screen Styles */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f8f9fa;
+        }
+
+        .auth-box {
+            background: white;
+            padding: 48px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e8e8e8;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .auth-box h1 {
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e8e8e8;
+            background: white;
+            color: #6b7280;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 0.85em;
+        }
+
+        .auth-tab.active {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 0.9em;
+        }
+
+        .success-message {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #060;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 0.9em;
+        }
+
+        .app-container {
+            display: none;
+        }
+
+        .app-container.active {
+            display: block;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .user-email {
+            font-size: 0.9em;
+            color: #6b7280;
+        }
+
+        .btn-logout {
+            background: #6b7280;
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+
+        .btn-logout:hover {
+            background: #4b5563;
+        }
     </style>
 </head>
 <body>
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-box">
+            <h1>CashFlow</h1>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <div id="authError" class="error-message" style="display: none;"></div>
+            <div id="authSuccess" class="success-message" style="display: none;"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="signupPasswordConfirm" required minlength="6">
+                </div>
+                <button type="submit" class="btn">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appScreen" class="app-container">
     <div class="container">
         <div class="header">
+            <div class="user-info">
+                <span class="user-email" id="userEmail"></span>
+                <button class="btn btn-logout btn-small" onclick="handleLogout()">Logout</button>
+            </div>
             <h1>CashFlow</h1>
             <div class="stats-grid">
                 <div class="stat-card">
@@ -486,8 +649,15 @@
             </div>
         </div>
     </div>
+    </div>
 
     <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://ujffuccrcnskixgvrhrp.supabase.co'; // Replace with your Supabase URL
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqZmZ1Y2NyY25za2l4Z3ZyaHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNjI3ODMsImV4cCI6MjA3NzczODc4M30.GmQR5BT9UwgOt945YSTPW_d_ZaWlmnc1BmAz5un_SQk'; // Replace with your Supabase anon key
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
         let transactions = [];
         let upcomingExpenses = [];
         let actualCashInHand = 15000;
@@ -495,73 +665,198 @@
         let editingTransaction = null;
         let editingUpcoming = null;
 
-        // Load data from localStorage
-        function loadData() {
-            const savedTransactions = localStorage.getItem('transactions');
-            const savedUpcoming = localStorage.getItem('upcomingExpenses');
-            const savedCash = localStorage.getItem('actualCash');
-            const savedCashHistory = localStorage.getItem('cashHistory');
-            
-            if (savedTransactions) {
-                transactions = JSON.parse(savedTransactions);
+        // ============ AUTHENTICATION FUNCTIONS ============
+
+        // Initialize auth state
+        async function initAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                currentUser = session.user;
+                showApp();
+                await loadData();
             } else {
-                // Load initial data from your example
-                transactions = [
-                    {date: '2025-10-31', description: 'Decant', debit: 3333, credit: 0, type: 'completed'},
-                    {date: '2025-10-31', description: 'SLT', debit: 10000, credit: 0, type: 'completed'},
-                    {date: '2025-10-31', description: 'Thatta', debit: 21500, credit: 0, type: 'completed'},
-                    {date: '2025-10-31', description: 'Salary-Add', debit: 0, credit: 30000, type: 'completed'},
-                    {date: '2025-10-31', description: 'Salary-Base', debit: 0, credit: 45000, type: 'completed'},
-                    {date: '2025-10-31', description: 'Got Scammed', debit: 7500, credit: 0, type: 'completed'},
-                    {date: '2025-10-31', description: 'Online Examination', debit: 10000, credit: 0, type: 'completed'},
-                    {date: '2025-10-31', description: 'Physical Examination', debit: 18000, credit: 0, type: 'completed'},
-                    {date: '2025-11-01', description: 'Thatta Lend', debit: 0, credit: 5000, type: 'completed'},
-                    {date: '2025-11-01', description: 'UberEats', debit: 1983, credit: 0, type: 'completed'},
-                    {date: '2025-11-01', description: 'Uber', debit: 500, credit: 0, type: 'completed'},
-                    {date: '2025-11-02', description: 'UberEats', debit: 1000, credit: 0, type: 'completed'},
-                    {date: '2025-11-03', description: 'Ikman', debit: 2100, credit: 0, type: 'completed'},
-                    {date: '2025-11-03', description: 'Uber', debit: 500, credit: 0, type: 'completed'},
-                    {date: '2025-11-03', description: 'BetSS Winnings', debit: 0, credit: 13000, type: 'completed'}
-                ];
+                showAuth();
             }
-            
-            if (savedUpcoming) {
-                upcomingExpenses = JSON.parse(savedUpcoming);
-            } else {
-                // Load initial upcoming expenses from your data
-                upcomingExpenses = [
-                    {description: 'uStore', debit: 2433, credit: 0},
-                    {description: 'Daraz', debit: 1056, credit: 0},
-                    {description: 'Daraz', debit: 1457, credit: 0},
-                    {description: 'Daraz', debit: 969, credit: 0},
-                    {description: 'Amma', debit: 10000, credit: 0},
-                    {description: 'Sheran-SHACourt', debit: 0, credit: 25000},
-                    {description: 'Sheran-MSP', debit: 0, credit: 4450},
-                    {description: 'Monthly Lunch', debit: 5000, credit: 0},
-                    {description: 'Physical Examination', debit: 18000, credit: 0},
-                    {description: 'Etihad Refund', debit: 0, credit: 46000}
-                ];
-            }
-            
-            if (savedCash) {
-                actualCashInHand = parseFloat(savedCash);
-            }
-            
-            if (savedCashHistory) {
-                cashHistory = JSON.parse(savedCashHistory);
-            }
-            
-            renderTransactions();
-            renderCashHistory();
-            updateStats();
+
+            // Listen for auth changes
+            supabase.auth.onAuthStateChange(async (event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    currentUser = session.user;
+                    showApp();
+                    await loadData();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showAuth();
+                }
+            });
         }
 
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('transactions', JSON.stringify(transactions));
-            localStorage.setItem('upcomingExpenses', JSON.stringify(upcomingExpenses));
-            localStorage.setItem('actualCash', actualCashInHand.toString());
-            localStorage.setItem('cashHistory', JSON.stringify(cashHistory));
+        // Show auth screen
+        function showAuth() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('appScreen').classList.remove('active');
+        }
+
+        // Show app screen
+        function showApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('appScreen').classList.add('active');
+            document.getElementById('userEmail').textContent = currentUser.email;
+        }
+
+        // Switch between login and signup tabs
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+
+            if (tab === 'login') {
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('signupForm').classList.add('active');
+            }
+
+            hideAuthMessages();
+        }
+
+        // Show error message
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('authSuccess').style.display = 'none';
+        }
+
+        // Show success message
+        function showAuthSuccess(message) {
+            const successDiv = document.getElementById('authSuccess');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('authError').style.display = 'none';
+        }
+
+        // Hide auth messages
+        function hideAuthMessages() {
+            document.getElementById('authError').style.display = 'none';
+            document.getElementById('authSuccess').style.display = 'none';
+        }
+
+        // Handle login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAuthMessages();
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                showAuthError(error.message);
+            }
+        });
+
+        // Handle signup
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAuthMessages();
+
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupPasswordConfirm').value;
+
+            if (password !== confirmPassword) {
+                showAuthError('Passwords do not match');
+                return;
+            }
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password
+            });
+
+            if (error) {
+                showAuthError(error.message);
+            } else {
+                showAuthSuccess('Account created successfully! Please login.');
+                setTimeout(() => switchAuthTab('login'), 2000);
+            }
+        });
+
+        // Handle logout
+        async function handleLogout() {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert('Error logging out: ' + error.message);
+            }
+        }
+
+        // ============ DATA FUNCTIONS ============
+
+        // Load data from Supabase
+        async function loadData() {
+            if (!currentUser) return;
+
+            try {
+                // Load transactions
+                const { data: transactionsData, error: transError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('date', { ascending: true });
+
+                if (transError) throw transError;
+                transactions = transactionsData || [];
+
+                // Load upcoming expenses
+                const { data: upcomingData, error: upcomingError } = await supabase
+                    .from('upcoming_expenses')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('display_order', { ascending: true });
+
+                if (upcomingError) throw upcomingError;
+                upcomingExpenses = upcomingData || [];
+
+                // Load cash history
+                const { data: cashHistoryData, error: cashHistoryError } = await supabase
+                    .from('cash_history')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('date', { ascending: false });
+
+                if (cashHistoryError) throw cashHistoryError;
+                cashHistory = cashHistoryData || [];
+
+                // Load user settings
+                const { data: settingsData, error: settingsError } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+
+                if (!settingsError && settingsData) {
+                    actualCashInHand = parseFloat(settingsData.actual_cash);
+                }
+
+                renderTransactions();
+                renderCashHistory();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Error loading data: ' + error.message);
+            }
+        }
+
+        // Save data is no longer needed as we save directly to Supabase
+        async function saveData() {
+            // This function is kept for compatibility but does nothing
+            // All saves are done directly in the respective functions
         }
 
         // Format currency
@@ -696,129 +991,183 @@
         });
 
         // Add transaction
-        document.getElementById('transactionForm').addEventListener('submit', function(e) {
+        document.getElementById('transactionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const type = document.getElementById('transactionType').value;
             const date = document.getElementById('transactionDate').value;
             const description = document.getElementById('transactionDescription').value;
             const amount = parseFloat(document.getElementById('transactionAmount').value);
-            
-            if (editingTransaction !== null) {
-                // Edit existing completed transaction
-                const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-                const transactionToEdit = sortedTransactions[editingTransaction];
-                const originalIndex = transactions.findIndex(t => 
-                    t.date === transactionToEdit.date && 
-                    t.description === transactionToEdit.description && 
-                    t.debit === transactionToEdit.debit && 
-                    t.credit === transactionToEdit.credit
-                );
-                
-                transactions[originalIndex] = {
-                    date: date,
-                    description: description,
-                    debit: type === 'expense' ? amount : 0,
-                    credit: type === 'income' ? amount : 0,
-                    type: 'completed'
-                };
-                
-                editingTransaction = null;
-                document.getElementById('submitBtn').textContent = 'Add Entry';
-                document.getElementById('cancelEditBtn').style.display = 'none';
-            } else if (editingUpcoming !== null) {
-                // Edit existing upcoming entry
-                upcomingExpenses[editingUpcoming] = {
-                    description: description,
-                    debit: (type === 'upcoming-expense' || type === 'expense') ? amount : 0,
-                    credit: (type === 'upcoming-income' || type === 'income') ? amount : 0
-                };
-                
-                editingUpcoming = null;
-                document.getElementById('submitBtn').textContent = 'Add Entry';
-                document.getElementById('cancelEditBtn').style.display = 'none';
-            } else {
-                // Add new entry
-                if (type === 'upcoming-expense' || type === 'upcoming-income') {
-                    upcomingExpenses.push({
-                        description: description,
-                        debit: type === 'upcoming-expense' ? amount : 0,
-                        credit: type === 'upcoming-income' ? amount : 0
-                    });
+
+            try {
+                if (editingTransaction !== null) {
+                    // Edit existing completed transaction
+                    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    const transactionToEdit = sortedTransactions[editingTransaction];
+
+                    const { error } = await supabase
+                        .from('transactions')
+                        .update({
+                            date: date,
+                            description: description,
+                            debit: type === 'expense' ? amount : 0,
+                            credit: type === 'income' ? amount : 0
+                        })
+                        .eq('id', transactionToEdit.id);
+
+                    if (error) throw error;
+
+                    editingTransaction = null;
+                    document.getElementById('submitBtn').textContent = 'Add Entry';
+                    document.getElementById('cancelEditBtn').style.display = 'none';
+                    document.getElementById('deleteEditBtn').style.display = 'none';
+                } else if (editingUpcoming !== null) {
+                    // Edit existing upcoming entry
+                    const upcomingToEdit = upcomingExpenses[editingUpcoming];
+
+                    const { error } = await supabase
+                        .from('upcoming_expenses')
+                        .update({
+                            description: description,
+                            debit: (type === 'upcoming-expense' || type === 'expense') ? amount : 0,
+                            credit: (type === 'upcoming-income' || type === 'income') ? amount : 0
+                        })
+                        .eq('id', upcomingToEdit.id);
+
+                    if (error) throw error;
+
+                    editingUpcoming = null;
+                    document.getElementById('submitBtn').textContent = 'Add Entry';
+                    document.getElementById('cancelEditBtn').style.display = 'none';
+                    document.getElementById('deleteEditBtn').style.display = 'none';
                 } else {
-                    transactions.push({
-                        date: date,
-                        description: description,
-                        debit: type === 'expense' ? amount : 0,
-                        credit: type === 'income' ? amount : 0,
-                        type: 'completed'
-                    });
+                    // Add new entry
+                    if (type === 'upcoming-expense' || type === 'upcoming-income') {
+                        const { error } = await supabase
+                            .from('upcoming_expenses')
+                            .insert({
+                                user_id: currentUser.id,
+                                description: description,
+                                debit: type === 'upcoming-expense' ? amount : 0,
+                                credit: type === 'upcoming-income' ? amount : 0,
+                                display_order: upcomingExpenses.length
+                            });
+
+                        if (error) throw error;
+                    } else {
+                        const { error } = await supabase
+                            .from('transactions')
+                            .insert({
+                                user_id: currentUser.id,
+                                date: date,
+                                description: description,
+                                debit: type === 'expense' ? amount : 0,
+                                credit: type === 'income' ? amount : 0,
+                                type: 'completed'
+                            });
+
+                        if (error) throw error;
+                    }
                 }
+
+                await loadData();
+
+                // Reset form
+                this.reset();
+                document.getElementById('transactionDate').valueAsDate = new Date();
+                document.getElementById('dateGroup').style.display = 'block';
+                document.getElementById('transactionDate').required = true;
+            } catch (error) {
+                console.error('Error saving transaction:', error);
+                alert('Error saving transaction: ' + error.message);
             }
-            
-            saveData();
-            renderTransactions();
-            updateStats();
-            
-            // Reset form
-            this.reset();
-            document.getElementById('transactionDate').valueAsDate = new Date();
-            document.getElementById('dateGroup').style.display = 'block';
-            document.getElementById('transactionDate').required = true;
         });
 
         // Update cash
-        document.getElementById('cashForm').addEventListener('submit', function(e) {
+        document.getElementById('cashForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const newCashAmount = parseFloat(document.getElementById('cashAmount').value);
             const currentCalculatedBalance = calculateBalance();
-            
-            // Add to cash history
-            cashHistory.push({
-                date: new Date().toISOString(),
-                amount: newCashAmount,
-                calculatedBalance: currentCalculatedBalance
-            });
-            
-            actualCashInHand = newCashAmount;
-            
-            saveData();
-            updateStats();
-            renderCashHistory();
-            
-            alert('Cash in hand updated successfully!');
+
+            try {
+                // Add to cash history
+                const { error: historyError } = await supabase
+                    .from('cash_history')
+                    .insert({
+                        user_id: currentUser.id,
+                        date: new Date().toISOString(),
+                        amount: newCashAmount,
+                        calculated_balance: currentCalculatedBalance
+                    });
+
+                if (historyError) throw historyError;
+
+                // Update user settings
+                const { error: settingsError } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: currentUser.id,
+                        actual_cash: newCashAmount,
+                        updated_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'user_id'
+                    });
+
+                if (settingsError) throw settingsError;
+
+                actualCashInHand = newCashAmount;
+
+                await loadData();
+
+                alert('Cash in hand updated successfully!');
+            } catch (error) {
+                console.error('Error updating cash:', error);
+                alert('Error updating cash: ' + error.message);
+            }
         });
 
         // Delete cash history entry
-        function deleteCashHistory(index) {
-            if (confirm('Are you sure you want to delete this cash history entry?')) {
+        async function deleteCashHistory(index) {
+            if (!confirm('Are you sure you want to delete this cash history entry?')) return;
+
+            try {
                 const sortedHistory = [...cashHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
                 const entryToDelete = sortedHistory[index];
-                const originalIndex = cashHistory.findIndex(e => e.date === entryToDelete.date);
-                
-                cashHistory.splice(originalIndex, 1);
-                saveData();
-                renderCashHistory();
+
+                const { error } = await supabase
+                    .from('cash_history')
+                    .delete()
+                    .eq('id', entryToDelete.id);
+
+                if (error) throw error;
+
+                await loadData();
+            } catch (error) {
+                console.error('Error deleting cash history:', error);
+                alert('Error deleting cash history: ' + error.message);
             }
         }
 
         // Delete transaction
-        function deleteTransaction(index) {
-            if (confirm('Are you sure you want to delete this transaction?')) {
+        async function deleteTransaction(index) {
+            if (!confirm('Are you sure you want to delete this transaction?')) return;
+
+            try {
                 const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
                 const transactionToDelete = sortedTransactions[index];
-                const originalIndex = transactions.findIndex(t => 
-                    t.date === transactionToDelete.date && 
-                    t.description === transactionToDelete.description && 
-                    t.debit === transactionToDelete.debit && 
-                    t.credit === transactionToDelete.credit
-                );
-                
-                transactions.splice(originalIndex, 1);
-                saveData();
-                renderTransactions();
-                updateStats();
+
+                const { error } = await supabase
+                    .from('transactions')
+                    .delete()
+                    .eq('id', transactionToDelete.id);
+
+                if (error) throw error;
+
+                await loadData();
+            } catch (error) {
+                console.error('Error deleting transaction:', error);
+                alert('Error deleting transaction: ' + error.message);
             }
         }
 
@@ -883,77 +1232,125 @@
         }
 
         // Delete current entry being edited
-        function deleteCurrentEdit() {
+        async function deleteCurrentEdit() {
             if (!confirm('Are you sure you want to delete this entry?')) {
                 return;
             }
-            
-            if (editingTransaction !== null) {
-                const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-                const transactionToDelete = sortedTransactions[editingTransaction];
-                const originalIndex = transactions.findIndex(t => 
-                    t.date === transactionToDelete.date && 
-                    t.description === transactionToDelete.description && 
-                    t.debit === transactionToDelete.debit && 
-                    t.credit === transactionToDelete.credit
-                );
-                
-                transactions.splice(originalIndex, 1);
-            } else if (editingUpcoming !== null) {
-                upcomingExpenses.splice(editingUpcoming, 1);
+
+            try {
+                if (editingTransaction !== null) {
+                    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    const transactionToDelete = sortedTransactions[editingTransaction];
+
+                    const { error } = await supabase
+                        .from('transactions')
+                        .delete()
+                        .eq('id', transactionToDelete.id);
+
+                    if (error) throw error;
+                } else if (editingUpcoming !== null) {
+                    const upcomingToDelete = upcomingExpenses[editingUpcoming];
+
+                    const { error } = await supabase
+                        .from('upcoming_expenses')
+                        .delete()
+                        .eq('id', upcomingToDelete.id);
+
+                    if (error) throw error;
+                }
+
+                cancelEdit();
+                await loadData();
+            } catch (error) {
+                console.error('Error deleting entry:', error);
+                alert('Error deleting entry: ' + error.message);
             }
-            
-            cancelEdit();
-            saveData();
-            renderTransactions();
-            updateStats();
         }
 
         // Move upcoming entry up or down
-        function moveUpcoming(index, direction) {
+        async function moveUpcoming(index, direction) {
             const newIndex = index + direction;
-            
+
             if (newIndex < 0 || newIndex >= upcomingExpenses.length) {
                 return;
             }
-            
-            // Swap elements
-            const temp = upcomingExpenses[index];
-            upcomingExpenses[index] = upcomingExpenses[newIndex];
-            upcomingExpenses[newIndex] = temp;
-            
-            saveData();
-            renderTransactions();
+
+            try {
+                // Swap display_order
+                const expense1 = upcomingExpenses[index];
+                const expense2 = upcomingExpenses[newIndex];
+
+                await supabase
+                    .from('upcoming_expenses')
+                    .update({ display_order: newIndex })
+                    .eq('id', expense1.id);
+
+                await supabase
+                    .from('upcoming_expenses')
+                    .update({ display_order: index })
+                    .eq('id', expense2.id);
+
+                await loadData();
+            } catch (error) {
+                console.error('Error moving entry:', error);
+                alert('Error moving entry: ' + error.message);
+            }
         }
 
         // Delete upcoming expense
-        function deleteUpcoming(index) {
-            if (confirm('Are you sure you want to delete this upcoming expense?')) {
-                upcomingExpenses.splice(index, 1);
-                saveData();
-                renderTransactions();
-                updateStats();
+        async function deleteUpcoming(index) {
+            if (!confirm('Are you sure you want to delete this upcoming expense?')) return;
+
+            try {
+                const upcomingToDelete = upcomingExpenses[index];
+
+                const { error } = await supabase
+                    .from('upcoming_expenses')
+                    .delete()
+                    .eq('id', upcomingToDelete.id);
+
+                if (error) throw error;
+
+                await loadData();
+            } catch (error) {
+                console.error('Error deleting upcoming expense:', error);
+                alert('Error deleting upcoming expense: ' + error.message);
             }
         }
 
         // Mark upcoming expense as completed
-        function markAsCompleted(index) {
+        async function markAsCompleted(index) {
             const expense = upcomingExpenses[index];
             const today = new Date().toISOString().split('T')[0];
-            
-            transactions.push({
-                date: today,
-                description: expense.description,
-                debit: expense.debit,
-                credit: expense.credit,
-                type: 'completed'
-            });
-            
-            upcomingExpenses.splice(index, 1);
-            
-            saveData();
-            renderTransactions();
-            updateStats();
+
+            try {
+                // Add as completed transaction
+                const { error: insertError } = await supabase
+                    .from('transactions')
+                    .insert({
+                        user_id: currentUser.id,
+                        date: today,
+                        description: expense.description,
+                        debit: expense.debit,
+                        credit: expense.credit,
+                        type: 'completed'
+                    });
+
+                if (insertError) throw insertError;
+
+                // Delete from upcoming
+                const { error: deleteError } = await supabase
+                    .from('upcoming_expenses')
+                    .delete()
+                    .eq('id', expense.id);
+
+                if (deleteError) throw deleteError;
+
+                await loadData();
+            } catch (error) {
+                console.error('Error marking as completed:', error);
+                alert('Error marking as completed: ' + error.message);
+            }
         }
 
         // Switch tabs
@@ -971,9 +1368,8 @@
         }
 
         // Initialize
-        loadData();
+        initAuth();
         document.getElementById('transactionDate').valueAsDate = new Date();
-        document.getElementById('cashAmount').value = actualCashInHand;
     </script>
 </body>
 </html>
