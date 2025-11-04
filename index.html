@@ -936,14 +936,14 @@
         function renderCashHistory() {
             const tbody = document.getElementById('cashHistoryTable');
             if (!tbody) return;
-            
+
             tbody.innerHTML = '';
-            
+
             // Sort by date (newest first)
             const sortedHistory = [...cashHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-            
+
             sortedHistory.forEach((entry, index) => {
-                const calculatedBalance = entry.calculatedBalance || 0;
+                const calculatedBalance = entry.calculated_balance || 0;
                 const difference = calculatedBalance - entry.amount;
                 
                 const row = document.createElement('tr');
