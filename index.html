@@ -808,7 +808,8 @@
                     .from('transactions')
                     .select('*')
                     .eq('user_id', currentUser.id)
-                    .order('date', { ascending: true });
+                    .order('date', { ascending: true })
+                    .order('display_order', { ascending: true });
 
                 if (transError) throw transError;
                 transactions = transactionsData || [];
@@ -877,19 +878,50 @@
         function renderTransactions() {
             const tbody = document.getElementById('transactionTable');
             tbody.innerHTML = '';
-            
-            // Sort completed transactions by date
-            const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
+
+            // Sort completed transactions by date, then by display_order
+            const sortedTransactions = [...transactions].sort((a, b) => {
+                const dateCompare = new Date(a.date) - new Date(b.date);
+                if (dateCompare !== 0) return dateCompare;
+                // If same date, sort by display_order (handle null/undefined as high value)
+                const aOrder = a.display_order !== null && a.display_order !== undefined ? a.display_order : 999999;
+                const bOrder = b.display_order !== null && b.display_order !== undefined ? b.display_order : 999999;
+                return aOrder - bOrder;
+            });
+
             let runningBalance = 0;
-            
+
+            // Group transactions by date to determine which ones can be reordered
+            const transactionsByDate = {};
+            sortedTransactions.forEach((t, index) => {
+                const dateKey = t.date;
+                if (!transactionsByDate[dateKey]) {
+                    transactionsByDate[dateKey] = [];
+                }
+                transactionsByDate[dateKey].push({ transaction: t, index: index });
+            });
+
             // Add completed transactions
             sortedTransactions.forEach((t, index) => {
                 runningBalance += (t.credit - t.debit);
-                
+
+                // Check if this transaction is part of a group with multiple entries on the same day
+                const dateKey = t.date;
+                const sameDayTransactions = transactionsByDate[dateKey];
+                const canReorder = sameDayTransactions.length > 1;
+                const positionInDay = sameDayTransactions.findIndex(item => item.index === index);
+                const isFirst = positionInDay === 0;
+                const isLast = positionInDay === sameDayTransactions.length - 1;
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${new Date(t.date).toLocaleDateString('en-GB')}</td>
+                    <td>
+                        ${canReorder ? `
+                            <button class="btn btn-move" onclick="moveTransaction(${index}, -1)" ${isFirst ? 'disabled' : ''}>↑</button>
+                            <button class="btn btn-move" onclick="moveTransaction(${index}, 1)" ${isLast ? 'disabled' : ''}>↓</button>
+                        ` : ''}
+                        ${new Date(t.date).toLocaleDateString('en-GB')}
+                    </td>
                     <td>${t.description}</td>
                     <td>Completed</td>
                     <td class="negative-amount">${t.debit > 0 ? formatCurrency(t.debit) : ''}</td>
@@ -897,7 +929,6 @@
                     <td style="font-weight: 600; ${runningBalance >= 0 ? 'color: #059669' : 'color: #dc2626'}">${formatCurrency(runningBalance)}</td>
                     <td>
                         <button class="btn btn-small btn-edit" onclick="editTransaction(${index})">Edit</button>
-                        <button class="btn btn-small" onclick="markAsCompleted(${index})">Complete</button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -1055,6 +1086,13 @@
 
                         if (error) throw error;
                     } else {
+                        // Calculate next display_order for this date
+                        const sameDateTransactions = transactions.filter(t => t.date === date);
+                        const maxOrder = sameDateTransactions.length > 0
+                            ? Math.max(...sameDateTransactions.map(t => t.display_order || 0))
+                            : -1;
+                        const nextOrder = maxOrder + 1;
+
                         const { error } = await supabase
                             .from('transactions')
                             .insert({
@@ -1063,7 +1101,8 @@
                                 description: description,
                                 debit: type === 'expense' ? amount : 0,
                                 credit: type === 'income' ? amount : 0,
-                                type: 'completed'
+                                type: 'completed',
+                                display_order: nextOrder
                             });
 
                         if (error) throw error;
@@ -1297,6 +1336,55 @@
             }
         }
 
+        // Move past transaction up or down (only within same day)
+        async function moveTransaction(index, direction) {
+            try {
+                // Sort transactions the same way as in renderTransactions
+                const sortedTransactions = [...transactions].sort((a, b) => {
+                    const dateCompare = new Date(a.date) - new Date(b.date);
+                    if (dateCompare !== 0) return dateCompare;
+                    const aOrder = a.display_order !== null && a.display_order !== undefined ? a.display_order : 999999;
+                    const bOrder = b.display_order !== null && b.display_order !== undefined ? b.display_order : 999999;
+                    return aOrder - bOrder;
+                });
+
+                const transaction1 = sortedTransactions[index];
+                const newIndex = index + direction;
+
+                if (newIndex < 0 || newIndex >= sortedTransactions.length) {
+                    return;
+                }
+
+                const transaction2 = sortedTransactions[newIndex];
+
+                // Only allow moving within the same day
+                if (transaction1.date !== transaction2.date) {
+                    alert('Cannot move transactions across different dates');
+                    return;
+                }
+
+                // Get or initialize display_order values
+                const order1 = transaction1.display_order !== null && transaction1.display_order !== undefined ? transaction1.display_order : index;
+                const order2 = transaction2.display_order !== null && transaction2.display_order !== undefined ? transaction2.display_order : newIndex;
+
+                // Swap display_order
+                await supabase
+                    .from('transactions')
+                    .update({ display_order: order2 })
+                    .eq('id', transaction1.id);
+
+                await supabase
+                    .from('transactions')
+                    .update({ display_order: order1 })
+                    .eq('id', transaction2.id);
+
+                await loadData();
+            } catch (error) {
+                console.error('Error moving transaction:', error);
+                alert('Error moving transaction: ' + error.message);
+            }
+        }
+
         // Delete upcoming expense
         async function deleteUpcoming(index) {
             if (!confirm('Are you sure you want to delete this upcoming expense?')) return;
@@ -1324,6 +1412,13 @@
             const today = new Date().toISOString().split('T')[0];
 
             try {
+                // Calculate next display_order for today
+                const sameDateTransactions = transactions.filter(t => t.date === today);
+                const maxOrder = sameDateTransactions.length > 0
+                    ? Math.max(...sameDateTransactions.map(t => t.display_order || 0))
+                    : -1;
+                const nextOrder = maxOrder + 1;
+
                 // Add as completed transaction
                 const { error: insertError } = await supabase
                     .from('transactions')
@@ -1333,7 +1428,8 @@
                         description: expense.description,
                         debit: expense.debit,
                         credit: expense.credit,
-                        type: 'completed'
+                        type: 'completed',
+                        display_order: nextOrder
                     });
 
                 if (insertError) throw insertError;
